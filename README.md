@@ -45,6 +45,15 @@ ECS normalization before releasing the first stable version.
 - Support legal compliance with configurable retention policies.
 - Minimize storage usage through lifecycle management.
 
+## Why?
+
+Most network environments collect logs from multiple vendors using different
+field names, formats and semantics.
+
+This project normalizes heterogeneous Syslog and NetFlow/IPFIX events into a
+single ECS-compatible data model, making searches, dashboards, lifecycle
+policies and forensic investigations consistent across all supported devices.
+
 ## Supported Devices
 
 - Fortinet FortiGate Firewalls
@@ -58,21 +67,16 @@ ECS normalization before releasing the first stable version.
 ## Architecture
 
 ```text
-                +----------------+
-                |    Internet    |
-                +----------------+
-                         │
-                         ▼
-                 +---------------+
-                 |    Devices    |
-                 +---------------+
+                +-----------------+
+                | Network Devices |
+                +-----------------+
                          │
         ┌────────────────┴────────────────┐
         ▼                                 ▼
-+------------------+            +------------------+
-|  Vector Ingest   |            |     GoFlow2      |
-|     (Syslog)     |            |   (NetFlow/IPFIX)|
-+------------------+            +------------------+
++------------------+            +-------------------+
+|  Vector Ingest   |            |      GoFlow2      |
+|     (Syslog)     |            |  (NetFlow/IPFIX)  |
++------------------+            +-------------------+
                  │                  │
                  └──────────┬───────┘
                             ▼
@@ -82,14 +86,14 @@ ECS normalization before releasing the first stable version.
                             │
                             ▼
                   +-------------------+
-                  | Vector Consumer   |
+                  |  Vector Consumer  |
                   | ECS Normalization |
                   +-------------------+
                             │
                             ▼
                    +------------------+
                    |   OpenSearch     |
-                   | Data Streams     |
+                   |  Data Streams    |
                    +------------------+
                             │
                             ▼
