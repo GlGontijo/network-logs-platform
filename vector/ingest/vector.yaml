@@ -1,5 +1,7 @@
 # Vector-ingest
 
+# Receive logs from diferent ports
+# :514/:1514 - General equipment logs | :1516 - Linux Rsyslog | :1517 - Firewalls
 sources:
   syslog_firewall:
     type: "socket"
@@ -37,7 +39,7 @@ sources:
     address: "0.0.0.0:1514"
     mode: "tcp"
 
-
+# Device IPs and Kafka topics prepare
 transforms:
 
   tr_firewall:
@@ -80,7 +82,7 @@ transforms:
       .collector_port = 514
       .device_ip = split(string(.host) ?? "0.0.0.0", ":")[0]
 
-
+# Sinks to Kafka topics
 sinks:
 
   kafka_firewall:
