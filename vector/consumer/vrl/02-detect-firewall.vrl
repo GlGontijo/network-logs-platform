@@ -12,7 +12,7 @@ raw_msg = string(.message) ?? ""
 if contains(raw_msg, "devname=") || contains(raw_msg, "logid=") {
   .observer.vendor = "fortigate"
   .observer.product = "fortios"
-} else if contains(raw_msg, "filterlog") || contains(string(.host.name), "-PCROUTER-") {
+} else if contains(raw_msg, "filterlog") {
   .observer.vendor = "opnsense"
   .observer.product = "core"
 } else {
