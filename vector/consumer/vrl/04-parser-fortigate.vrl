@@ -1,0 +1,136 @@
+# =====================================================================
+# NETWORK LOGS PLATFORM - CHRONICLE-INSPIRED ECS PARSER
+# Referência: Google Security Operations (Chronicle) UDM Engine
+# =====================================================================
+
+if .observer.vendor == "fortigate" {
+  
+  # 1. Parsing KV nativo do FortiOS
+  kv_msg = strip_whitespace(string(.message) ?? "")
+  parsed_kv, err = parse_key_value(kv_msg, whitespace: " ")
+
+  if err == null {
+    # Metadados de Identidade do Ativo (Observer)
+    .observer.name = parsed_kv.devname
+    .observer.serial_number = parsed_kv.devid
+    .labels.vdom = parsed_kv.vd ?? "root"
+    
+    # 2. Entidades de Rede (Camada 3 e 4)
+    .source.ip = parsed_kv.srcip
+    .source.port = to_int(parsed_kv.srcport)
+    .source.mac = parsed_kv.srcmac
+    
+    .destination.ip = parsed_kv.dstip
+    .destination.port = to_int(parsed_kv.dstport)
+    .destination.mac = parsed_kv.dstmac
+    
+    # Usuário e Interfaces (Mapeamento Estrito)
+    if parsed_kv.user != null && parsed_kv.user != "" {
+      .user.name = parsed_kv.user
+    }
+    .network.ingress = { "interface": { "name": parsed_kv.srcintf } }
+    .network.egress = { "interface": { "name": parsed_kv.dstintf } }
+    
+    # Tradução Cinética de Protocolo Transport
+    proto_num = to_int(parsed_kv.proto) ?? 0
+    if proto_num == 6 { .network.transport = "tcp" }
+    else if proto_num == 17 { .network.transport = "udp" }
+    else if proto_num == 1 { .network.transport = "icmp" }
+    else { .network.transport = downcase(string(parsed_kv.protoname)) ?? string(proto_num) }
+    
+    # 3. Tratamento Volumétrico e Métricas de Performance
+    .source.bytes = to_int(parsed_kv.sentbyte)
+    .destination.bytes = to_int(parsed_kv.rcvdbyte)
+    .network.bytes = (to_int(parsed_kv.sentbyte) ?? 0) + (to_int(parsed_kv.rcvdbyte) ?? 0)
+    
+    .source.packets = to_int(parsed_kv.sentpkt)
+    .destination.packets = to_int(parsed_kv.rcvdpkt)
+    .network.packets = (to_int(parsed_kv.sentpkt) ?? 0) + (to_int(parsed_kv.rcvdpkt) ?? 0)
+    
+    # Correção do ECS para Duração: O FortiOS entrega em segundos, o ECS exige NANOSSEGUNDOS.
+    # Essa otimização previne erros de agregação matemática no OpenSearch.
+    if parsed_kv.duration != null {
+      .event.duration = to_int(parsed_kv.duration) * 1000000000
+      .event.durationseg = to_int(parsed_kv.duration)
+    }
+
+    # 4. Mapeamento de Regras de Segurança (Firewall Rules)
+    # No ECS, IDs de regras e políticas pertencem ao objeto nativo 'rule'
+    .rule.id = parsed_kv.policyid ?? ""
+    .rule.uuid = parsed_kv.poluuid ?? ""
+    .rule.name = parsed_kv.policyname ?? ""
+
+    # 5. MOTOR DE INFERÊNCIA CONTEXTUAL (Inspirado na Matriz do Google Chronicle)
+    log_type = parsed_kv.type ?? "unknown"
+    log_subtype = parsed_kv.subtype ?? "unknown"
+    .event.action = parsed_kv.action ?? "unknown"
+    .event.code = parsed_kv.logid ?? ""
+
+    # Reset de arrays de taxonomia do ECS para classificação estrita
+    .event.category = []
+    .event.type = []
+
+    # Fluxo Condicional do Chronicle adaptado ao ECS
+    if log_type == "traffic" {
+      .event.category = push(.event.category, "network")
+      .event.category = push(.event.category, "firewall")
+      
+      if .event.action == "deny" || .event.action == "block" {
+        .event.type = push(.event.type, "denied")
+      } else {
+        .event.type = push(.event.type, "allowed")
+      }
+      
+    } else if log_type == "utm" {
+      .event.category = push(.event.category, "network")
+      
+      if log_subtype == "dns" {
+        .event.category = push(.event.category, "database")
+        .event.type = push(.event.type, "protocol")
+        .network.protocol = "dns"
+        # Campos extras para auditoria DNS
+        .dns.question.name = parsed_kv.qname
+        .dns.question.type = parsed_kv.qtype
+      } else if log_subtype == "webfilter" {
+        .event.category = push(.event.category, "web")
+        .event.type = push(.event.type, "access")
+        .url.full = parsed_kv.url
+      } else if log_subtype == "app-ctrl" {
+        .event.category = push(.event.category, "application")
+        .service.name = parsed_kv.app
+      } else if log_subtype == "ips" {
+        .event.category = push(.event.category, "intrusion_detection")
+        .event.type = push(.event.type, "info")
+      } else {
+        .event.type = push(.event.type, "info")
+      }
+      
+    } else if log_type == "event" {
+      if log_subtype == "vpn" {
+        .event.category = push(.event.category, "authentication")
+        .event.category = push(.event.category, "network")
+        .event.type = push(.event.type, "user")
+      } else if log_subtype == "system" || log_subtype == "user" {
+        .event.category = push(.event.category, "iam")
+        .event.category = push(.event.category, "configuration")
+        .event.type = push(.event.type, "change")
+      } else {
+        .event.category = push(.event.category, "system")
+        .event.type = push(.event.type, "info")
+      }
+    } else {
+      # Fallback genérico para logs não mapeados explicitamente pelo motor
+      .event.category = ["network"]
+      .event.type = ["info"]
+    }
+
+    # 6. Preservação das Informações Brutas do Fabricante em Objeto Customizado (UFTM)
+    .uftm.vendor_type = log_type
+    .uftm.vendor_subtype = log_subtype
+    .uftm.service_string = parsed_kv.service
+    .uftm.security = {
+      "level": parsed_kv.level ?? "information",
+      "threat": parsed_kv.attack
+    }
+  }
+}
