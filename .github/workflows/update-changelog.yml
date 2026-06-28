@@ -17,20 +17,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Mostrar Git info (debug)
-        run: |
-          echo "Branch: ${{ github.ref }}"
-          git --no-pager log -1 --pretty=full
-
-      - name: Setup Node (explicit)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # ou '18' se preferir compatibilidade garantida
-
-      - name: Node / npm versions (debug)
-        run: |
-          node -v
-          npm -v
+          node-version: '20'
+          cache: 'npm'
 
       - name: Mostrar package.json (debug)
         run: |
@@ -39,15 +30,20 @@ jobs:
       - name: Instalar dependências
         run: npm install
 
-      - name: Gerar CHANGELOG.md
+      - name: Generate CHANGELOG.md
         run: npm run changelog
 
-      - name: Verificar se CHANGELOG mudou (debug)
+      - name: Check if CHANGELOG changed
+        id: check_changes
         run: |
-          git status --porcelain
-          git --no-pager diff --name-only
+          if git diff --quiet CHANGELOG.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Commitar e push do CHANGELOG (se mudou)
+      - name: Commit and push CHANGELOG (if changed)
+        if: steps.check_changes.outputs.changed == 'true'
         uses: EndBug/add-and-commit@v9
         with:
           message: 'chore: atualizar CHANGELOG [skip ci]'
