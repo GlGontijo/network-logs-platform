@@ -17,45 +17,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node (explicit to avoid runner warnings)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Node & npm versions (debug)
-        run: |
-          node -v
-          npm -v
-
-      - name: Install dependencies or auto-changelog globally
-        run: |
-          if [ -f package.json ]; then
-            npm ci
-          else
-            npm install -g auto-changelog
-          fi
+      - name: Install dependencies
+        run: npm ci
 
       - name: Generate CHANGELOG.md
-        run: |
-          # Try npm script first; if missing/fails, fall back to global auto-changelog
-          set -e
-          npm run changelog --silent || auto-changelog -p
-
-      - name: Show changed files (debug)
-        run: |
-          git status --porcelain
-          git --no-pager diff --name-only
-
-      - name: Stage CHANGELOG (if present)
-        run: |
-          if [ -f CHANGELOG.md ]; then
-            git add CHANGELOG.md
-          fi
+        run: npm run changelog
 
       - name: Check if CHANGELOG changed
         id: check_changes
         run: |
-          if git diff --cached --quiet; then
+          if git diff --quiet CHANGELOG.md; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
