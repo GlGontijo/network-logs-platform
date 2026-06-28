@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node (explicit)
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # ou '18' se preferir compatibilidade garantida
+          node-version: '18' # ou '18' se preferir compatibilidade garantida
 
       - name: Node / npm versions (debug)
         run: |
