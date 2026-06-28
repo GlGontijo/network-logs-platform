@@ -1,0 +1,7 @@
+include:
+  - docker/compose/opensearch.yml
+  - docker/compose/vector.yml
+  - docker/compose/kafka.yml
+  - docker/compose/goflow2.yml
+  - docker/compose/dashboards.yml
+  - docker/compose/tools.yml
