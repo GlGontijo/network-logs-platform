@@ -1,0 +1,48 @@
+name = "CHANGELOG"
+
+[parser]
+# Regex flexível que captura <type>(<scope>)!?: <description>
+# Ajuste aqui caso seus commits usem outro formato.
+commit_pattern = '^(?P<type>[^(: ]+)(?:\\((?P<scope>[^)]+)\\))?(?P<breaking>!)?: (?P<description>.+)'
+issue_prefix = "#"
+
+[transform]
+# Remove mensagens de merge redundantes para não poluir o changelog
+strip_merge_messages = true
+
+# Como agrupar os tipos de commit em seções
+[[sections]]
+id = "features"
+title = "Features"
+types = ["feat"]
+
+[[sections]]
+id = "fixes"
+title = "Bug Fixes"
+types = ["fix"]
+
+[[sections]]
+id = "performance"
+title = "Performance Improvements"
+types = ["perf"]
+
+[[sections]]
+id = "docs"
+title = "Documentation"
+types = ["docs"]
+
+[[sections]]
+id = "refactor"
+title = "Refactor"
+types = ["refactor"]
+
+[[sections]]
+id = "chores"
+title = "Chores & Maintenance"
+types = ["chore", "ci", "build", "test", "style"]
+
+[[sections]]
+id = "other"
+title = "Other changes"
+# commits que não casarem com os tipos acima cairão aqui
+types = ["other"]

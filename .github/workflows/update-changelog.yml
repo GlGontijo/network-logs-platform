@@ -16,6 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -23,7 +24,7 @@ jobs:
           tool: git-cliff
 
       - name: Generate CHANGELOG.md
-        run: git-cliff -vv --output CHANGELOG.md
+        run: git-cliff --config cliff.toml -vv --output CHANGELOG.md
 
       - name: Check if CHANGELOG changed
         id: check_changes
@@ -33,6 +34,15 @@ jobs:
           else
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Ensure branch up-to-date (before commit)
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          # Try to rebase onto origin/main; if that fails, merge (keeps CI non-blocking)
+          git rebase origin/main || git merge --no-edit origin/main || true
 
       - name: Commit and push CHANGELOG (if changed)
         if: steps.check_changes.outputs.changed == 'true'
