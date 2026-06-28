@@ -37,7 +37,7 @@ jobs:
           if [ -f package.json ]; then cat package.json; else echo "package.json não encontrado"; fi
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Gerar CHANGELOG.md
         run: npm run changelog
