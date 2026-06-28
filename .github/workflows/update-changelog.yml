@@ -23,7 +23,7 @@ jobs:
           tool: git-cliff
 
       - name: Generate CHANGELOG.md
-        run: git-cliff --output CHANGELOG.md
+        run: git-cliff -vv --output CHANGELOG.md
 
       - name: Check if CHANGELOG changed
         id: check_changes
