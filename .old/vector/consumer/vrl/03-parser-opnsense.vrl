@@ -1,0 +1,114 @@
+# =====================================================================
+# NETWORK LOGS PLATFORM - CHRONICLE-INSPIRED OPNsense PARSER
+# Referência: Google Security Operations (Chronicle) UDM Engine - filterlog
+# =====================================================================
+
+if .observer.vendor == "opnsense" {
+  raw_msg = strip_whitespace(string(.message) ?? "")
+
+  # 1. Isolamento do Payload CSV do filterlog
+  # Remove os cabeçalhos do syslog clássico ou RFC5424 para obter apenas a string CSV
+  # Exemplo de extração: filterlog[24523]: 82,,,1000001532,em0,match,block,...
+  csv_match = match(raw_msg, r'filterlog(?:\[\d+\])?: (.*)')
+  
+  csv_payload = if csv_match != null {
+    csv_match.captures[0]
+  } else {
+    raw_msg
+  }
+
+  # 2. Parsing da estrutura posicional (CSV) do pf
+  tokens, err = parse_csv(csv_payload)
+
+  if err == null && length(tokens) > 8 {
+    # Metadados do Observador e Infraestrutura Base
+    .observer.type = "firewall"
+    .observer.product = "core"
+    
+    # Mapeamento do Core de Regras (Alinhado perfeitamente com o FortiGate)
+    # tokens[0] = Número da regra interna (rulenr)
+    # tokens[3] = Tracker ID único persistente (Mapeado como rule.id principal conforme UDM)
+    .rule.id = tokens[3]
+    .uftm.firewall.sub_rule_id = tokens[1]
+    .uftm.firewall.anchor = tokens[2]
+    .uftm.firewall.reason = tokens[5]
+
+    # Identificação de Interface e Direção do Fluxo
+    interface_name = tokens[4]
+    direction = tokens[7] # in / out
+
+    if direction == "in" {
+      .network.direction = "ingress"
+      .network.ingress = { "interface": { "name": interface_name } }
+    } else if direction == "out" {
+      .network.direction = "egress"
+      .network.egress = { "interface": { "name": interface_name } }
+    }
+
+    # 3. NORMALIZAÇÃO ESTRETA DE AÇÃO E CATEGORIA (O Grande Ganho)
+    # O OPNsense usa "pass" e "block". Vamos padronizar com a taxonomia do ECS.
+    raw_action = tokens[6]
+    .event.action = raw_action
+    .event.code = tokens[3]
+
+    if raw_action == "block" || raw_action == "scrub" {
+      .event.category = ["network", "firewall"]
+      .event.type = ["denied"]
+    } else if raw_action == "pass" {
+      .event.category = ["network", "firewall"]
+      .event.type = ["allowed"]
+    } else {
+      .event.category = ["network"]
+      .event.type = ["info"]
+    }
+
+    # 4. TRATAMENTO CONDICIONAL DA MATRIZ IP (IPv4 vs IPv6)
+    # Conforme a documentação do Chronicle, os índices mudam totalmente dependendo da versão do IP
+    ip_version = tokens[8]
+
+    if ip_version == "4" {
+      .network.type = "ipv4"
+      
+      # Mapeamento de Camada 3 (IPv4)
+      .source.ip = tokens[18]
+      .destination.ip = tokens[19]
+      
+      # Metadados de transporte e identificação do protocolo
+      .network.transport = downcase(string(tokens[16])) ?? "unknown"
+      
+      # Se for TCP (6) ou UDP (17), extrai as portas nas posições da matriz IPv4
+      if .network.transport == "tcp" || .network.transport == "udp" {
+        .source.port = to_int(tokens[20])
+        .destination.port = to_int(tokens[21])
+        
+        # Se for TCP, captura flags adicionais de controle de sessão
+        if .network.transport == "tcp" && length(tokens) > 23 {
+          .uftm.firewall.tcp_flags = tokens[23]
+        }
+      } else if .network.transport == "icmp" {
+        # Para ICMP em IPv4, os dados do tipo/código ficam logo após os IPs
+        .uftm.firewall.icmp_type = tokens[20]
+      }
+
+    } else if ip_version == "6" {
+      .network.type = "ipv6"
+      
+      # Mapeamento de Camada 3 (IPv6) - Note que as posições mudam no pf do FreeBSD
+      .source.ip = tokens[15]
+      .destination.ip = tokens[16]
+      
+      # Protocolo em IPv6 fica na posição 12
+      .network.transport = downcase(string(tokens[12])) ?? "unknown"
+      
+      # Se for TCP ou UDP em IPv6, as portas mudam de posição na matriz
+      if .network.transport == "tcp" || .network.transport == "udp" {
+        .source.port = to_int(tokens[17])
+        .destination.port = to_int(tokens[18])
+        
+        if .network.transport == "tcp" && length(tokens) > 20 {
+          .uftm.firewall.tcp_flags = tokens[20]
+        }
+      }
+    }
+  }
+}

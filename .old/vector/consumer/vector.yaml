@@ -1,0 +1,117 @@
+# Vector Consumer
+
+# Consumer can use more than one instance
+data_dir: /var/lib/vector/${HOSTNAME}
+
+# Receive from Kafka topics
+sources:
+  kafka_syslog_firewall:
+    type: "kafka"
+    bootstrap_servers: "kafka:9092"
+    topics: ["ingest-syslog-firewall"]
+    group_id: "vector-consumer-firewall"
+    auto_offset_reset: "latest"
+
+  kafka_syslog_wifi:
+    type: "kafka"
+    bootstrap_servers: "kafka:9092"
+    topics: ["ingest-syslog-wifi"]
+    group_id: "vector-consumer-wifi"
+    auto_offset_reset: "latest"
+
+  kafka_syslog_app:
+    type: "kafka"
+    bootstrap_servers: "kafka:9092"
+    topics: ["ingest-syslog-application"]
+    group_id: "vector-consumer-app"
+    auto_offset_reset: "latest"
+
+  kafka_syslog_general:
+    type: "kafka"
+    bootstrap_servers: "kafka:9092"
+    topics: ["ingest-syslog-general"]
+    group_id: "vector-consumer-general"
+    auto_offset_reset: "latest"
+
+  kafka_netflow_raw:
+    type: "kafka"
+    bootstrap_servers: "kafka:9092"
+    topics: ["netflow-logs"]
+    group_id: "vector-consumer-netflow"
+    auto_offset_reset: "latest"
+
+# Transform in ECS structure
+transforms:
+
+  process_firewall:
+    type: "remap"
+    inputs: ["kafka_syslog_firewall"]
+    source: |
+      ${include:consumer/01-base.vrl}
+      ${include:consumer/02-detect-firewall.vrl}
+      
+      if .observer.vendor == "fortigate" {
+        ${include:consumer/04-parser-fortigate.vrl}
+      } else if .observer.vendor == "opnsense" {
+        ${include:consumer/03-parser-opnsense.vrl}
+      }
+
+  process_wifi:
+    type: "remap"
+    inputs: ["kafka_syslog_wifi"]
+    source: |
+      ${include:consumer/01-base.vrl}
+      .event.module = "wifi"
+      .observer.vendor = "ruckus"
+      ${include:consumer/07-parser-wifi.vrl}
+
+  process_app:
+    type: "remap"
+    inputs: ["kafka_syslog_app"]
+    source: |
+      ${include:consumer/01-base.vrl}
+      .event.module = "system"
+      .observer.vendor = "linux"
+      ${include:consumer/06-parser-linux.vrl}
+
+  process_general:
+    type: "remap"
+    inputs: ["kafka_syslog_general"]
+    source: |
+      ${include:consumer/01-base.vrl}
+      .event.module = "general"
+      .observer.vendor = "generic"
+      ${include:consumer/08-parser-switch.vrl}
+
+  process_netflow:
+    type: "remap"
+    inputs: ["kafka_netflow_raw"]
+    source: |
+      ${include:consumer/01-base.vrl}
+      .event.module = "netflow"
+      .observer.vendor = "netsampler"
+      ${include:consumer/05-parser-netflow.vrl}
+
+  pipeline_route_all:
+    type: "remap"
+    inputs:
+      - "process_firewall"
+      - "process_wifi"
+      - "process_app"
+      - "process_general"
+      - "process_netflow"
+    source: |
+      ${include:consumer/40-route-datastream.vrl}
+
+# Send to Opensearch data streams
+sinks:
+  opensearch_cluster:
+    type: "opensearch"
+    inputs: ["pipeline_40_route"]
+    hosts: ["http://opensearch-hot:9200"]
+    index: "%{.metadata.opensearch_index}"
+    mode: "data_stream"
+#    auth:
+#      strategy: "basic"
+#      username: "admin"
+#      password: "${OPENSEARCH_PASSWORD}"

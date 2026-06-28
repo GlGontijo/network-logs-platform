@@ -1,0 +1,33 @@
+# =====================================================================
+# UFTM COMMON SCHEMA - FRAMEWORK DE NORMALIZAÇÃO
+# Responsabilidade: Inicialização da matriz canônica de campos
+# =====================================================================
+
+# 1. Armazena a mensagem bruta e metadados essenciais de ingestão externa
+.message = string(.message) ?? ""
+.uftm = {}
+.uftm.collector = {}
+.uftm.collector.timestamp = .timestamp ?? now()
+.uftm.collector.port = to_int(.collector_port) ?? to_int(%"port") ?? 514
+
+# 2. Resgata e garante o IP de origem física do ativo de rede
+# Evita a perda do IP real causada por mudanças de network_mode no container
+device_ip = string(.device_ip) ?? string(.host) ?? "0.0.0.0"
+
+# 3. Inicializa os objetos estruturais estritos do ECS
+.event = {}
+.observer = {}
+.host = {}
+.source = {}
+.destination = {}
+.network = {}
+.labels = {}
+
+# 4. Preenchimento de fallbacks básicos de infraestrutura
+.host.ip = device_ip
+.host.name = string(.hostname) ?? device_ip
+
+# Meta-informações padrão de ciclo de vida do evento
+.event.created = now()
+.event.category = ["generic"]
+.event.type = ["info"]

@@ -1,0 +1,63 @@
+# =====================================================================
+# NETWORK LOGS PLATFORM - ECS NETFLOW PARSER
+# =====================================================================
+
+# Mapeamentos de Dicionários Estáticos do código legado
+proto_id_to_name = { "1": "icmp", "2": "igmp", "6": "tcp", "9": "igp", "17": "udp", "41": "ipv6", "47": "gre", "50": "esp", "51": "ah", "58": "ipv6-icmp", "89": "osp" }
+
+# 1. Identificação de Protocolo de Transporte
+raw_proto = to_string(.proto) ?? "0"
+.network.transport = get(proto_id_to_name, [raw_proto]) ?? ("proto_" + raw_proto)
+
+# 2. Desmembramento de Flags TCP (Bitwise para Strings de Auditoria)
+if .network.transport == "tcp" {
+  flags = to_int(.tcp_flags) ?? 0
+  f_arr = []
+  
+  if flags >= 128 { f_arr = push(f_arr, "CWR"); flags = flags - 128 }
+  if flags >= 64  { f_arr = push(f_arr, "ECE"); flags = flags - 64  }
+  if flags >= 32  { f_arr = push(f_arr, "URG"); flags = flags - 32  }
+  if flags >= 16  { f_arr = push(f_arr, "ACK"); flags = flags - 16  }
+  if flags >= 8   { f_arr = push(f_arr, "PSH"); flags = flags - 8   }
+  if flags >= 4   { f_arr = push(f_arr, "RST"); flags = flags - 4   }
+  if flags >= 2   { f_arr = push(f_arr, "SYN"); flags = flags - 2   }
+  if flags >= 1   { f_arr = push(f_arr, "FIN"); flags = flags - 1   }
+  
+  .uftm.netflow.tcp_flags_names = join(f_arr, " | ") ?? ""
+}
+.network.transport_flags = to_string(.tcp_flags) ?? "0"
+
+# 3. Tratamento de Tempo e Cálculo de Duração Extrema (ECS exige Nanossegundos)
+end_ns = to_int(.time_flow_end_ns) ?? 0
+start_ns = to_int(.time_flow_start_ns) ?? end_ns
+
+if end_ns > start_ns {
+  .event.duration = end_ns - start_ns
+}
+
+# Formatação de timestamps legíveis para cruzamento analítico
+if end_ns > 0 {
+  .event.end = format_timestamp(from_unix_timestamp!(end_ns, "nanoseconds"), format: "%Y-%m-%dT%H:%M:%S.%3fZ")
+}
+if start_ns > 0 {
+  .event.start = format_timestamp(from_unix_timestamp!(start_ns, "nanoseconds"), format: "%Y-%m-%dT%H:%M:%S.%3fZ")
+}
+
+# 4. Entidades de Fluxo L3 / L4 (IPs e Portas)
+.source.ip = string(.src_addr) ?? "0.0.0.0"
+.source.port = to_int(.src_port) ?? 0
+.destination.ip = string(.dst_addr) ?? "0.0.0.0"
+.destination.port = to_int(.dst_port) ?? 0
+
+# Volumetria Cinética
+.network.packets = to_int(.packets) ?? 0
+.network.bytes = to_int(.bytes) ?? 0
+
+# Metadados do Coletor e Roteamento
+.observer.ip = string(.sampler_address) ?? "0.0.0.0"
+.observer.name = .observer.ip
+.observer.product = "goflow2"
+
+.event.category = ["network"]
+.event.type = ["connection"]
+.event.action = "flow_completed"
