@@ -23,8 +23,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Mostrar package.json (debug)
+        run: |
+          if [ -f package.json ]; then cat package.json; else echo "package.json não encontrado"; fi
+
+      - name: Instalar dependências
+        run: npm install
 
       - name: Generate CHANGELOG.md
         run: npm run changelog
