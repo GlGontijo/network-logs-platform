@@ -1,0 +1,37 @@
+name: Atualizar CHANGELOG
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  generate-changelog:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Instalar deps
+        run: npm ci
+
+      - name: Gerar CHANGELOG.md
+        run: npm run changelog
+
+      - name: Commitar e push do CHANGELOG (se mudou)
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: "chore: atualizar CHANGELOG [skip ci]"
+          add: 'CHANGELOG.md'
+          author_name: 'github-actions'
+          author_email: 'github-actions@github.com'
