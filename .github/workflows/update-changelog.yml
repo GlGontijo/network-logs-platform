@@ -17,21 +17,40 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
+      - name: Mostrar Git info (debug)
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          git --no-pager log -1 --pretty=full
+
+      - name: Setup Node (explicit)
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '24' # ou '18' se preferir compatibilidade garantida
 
-      - name: Instalar deps
+      - name: Node / npm versions (debug)
+        run: |
+          node -v
+          npm -v
+
+      - name: Mostrar package.json (debug)
+        run: |
+          if [ -f package.json ]; then cat package.json; else echo "package.json não encontrado"; fi
+
+      - name: Instalar dependências
         run: npm ci
 
       - name: Gerar CHANGELOG.md
         run: npm run changelog
 
+      - name: Verificar se CHANGELOG mudou (debug)
+        run: |
+          git status --porcelain
+          git --no-pager diff --name-only
+
       - name: Commitar e push do CHANGELOG (se mudou)
         uses: EndBug/add-and-commit@v9
         with:
-          message: "chore: atualizar CHANGELOG [skip ci]"
+          message: 'chore: atualizar CHANGELOG [skip ci]'
           add: 'CHANGELOG.md'
           author_name: 'github-actions'
           author_email: 'github-actions@github.com'
