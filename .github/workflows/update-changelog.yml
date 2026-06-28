@@ -17,37 +17,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Mostrar Git info (debug)
-        run: |
-          echo "Branch: ${{ github.ref }}"
-          git --no-pager log -1 --pretty=full
-
-      - name: Setup Node (explicit)
+      - name: Setup Node (explicit to avoid runner warnings)
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # ou '18' se preferir compatibilidade garantida
+          node-version: '24'
 
-      - name: Node / npm versions (debug)
+      - name: Node & npm versions (debug)
         run: |
           node -v
           npm -v
 
-      - name: Mostrar package.json (debug)
+      - name: Install dependencies or auto-changelog globally
         run: |
-          if [ -f package.json ]; then cat package.json; else echo "package.json não encontrado"; fi
+          if [ -f package.json ]; then
+            npm ci
+          else
+            npm install -g auto-changelog
+          fi
 
-      - name: Instalar dependências
-        run: npm ci
+      - name: Generate CHANGELOG.md
+        run: |
+          # Try npm script first; if missing/fails, fall back to global auto-changelog
+          set -e
+          npm run changelog --silent || auto-changelog -p
 
-      - name: Gerar CHANGELOG.md
-        run: npm run changelog
-
-      - name: Verificar se CHANGELOG mudou (debug)
+      - name: Show changed files (debug)
         run: |
           git status --porcelain
           git --no-pager diff --name-only
 
-      - name: Commitar e push do CHANGELOG (se mudou)
+      - name: Stage CHANGELOG (if present)
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            git add CHANGELOG.md
+          fi
+
+      - name: Check if CHANGELOG changed
+        id: check_changes
+        run: |
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push CHANGELOG (if changed)
+        if: steps.check_changes.outputs.changed == 'true'
         uses: EndBug/add-and-commit@v9
         with:
           message: 'chore: atualizar CHANGELOG [skip ci]'
