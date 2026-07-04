@@ -178,18 +178,28 @@ def _vrl_epoch_to_iso(src: str, dst: str, fm: FieldMapping) -> list[str]:
 
 def _vrl_date_time_to_iso(src: str, dst: str, fm: FieldMapping) -> list[str]:
     # Combina os campos STRING '.date' ("2023-08-10") e '.time' ("15:02:25")
-    # do FortiOS em um timestamp ISO 8601 real. Este handler é acionado pela
-    # linha do CSV que mapeia 'time' -> '@timestamp'; ele lê '.date' e '.time'
-    # diretamente (não usa `src`/`dst` genéricos porque precisa dos dois campos
-    # ao mesmo tempo). O parâmetro `dst` ainda é respeitado como destino.
+    # do FortiOS em um timestamp ISO 8601 real.
+    #
+    # IMPORTANTE: sem timezone explícito, parse_timestamp usa o fuso horário
+    # LOCAL DO HOST rodando o Vector — dependência frágil e silenciosa. O
+    # FortiOS normalmente envia um campo '.tz' no formato "-0300"/"+0200"
+    # junto com date/time; usamos ele para fixar o offset explicitamente.
+    # Se '.tz' estiver ausente, cai para UTC (nunca para o timezone do host).
     return [
         f"if exists(.date) && exists(.time) {{",
         f'    _combined = (to_string(.date) ?? "") + " " + (to_string(.time) ?? "")',
-        f'    _ts, err = parse_timestamp(_combined, format: "%Y-%m-%d %H:%M:%S")',
+        f'    _tz = "UTC"',
+        f"    if exists(.tz) {{",
+        f'        _tz_raw = to_string(.tz) ?? ""',
+        f"        if length(_tz_raw) == 5 {{",
+        f'            _tz = slice!(_tz_raw, 0, 3) + ":" + slice!(_tz_raw, 3, 5)',
+        f"        }}",
+        f"    }}",
+        f'    _ts, err = parse_timestamp(_combined, format: "%Y-%m-%d %H:%M:%S", timezone: _tz)',
         f"    if err == null {{",
         f"        {dst} = _ts",
         f"    }} else {{",
-        f'        log("VRL parse_timestamp falhou para date+time: " + err, level: "warn")',
+        f'        log("VRL parse_timestamp falhou para date+time (tz=" + _tz + "): " + err, level: "warn")',
         f"    }}",
         f"}}",
     ]
