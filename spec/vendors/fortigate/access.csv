@@ -9,8 +9,8 @@ vendor_field,vendor_type,fgt_type,fgt_subtype,ecs_field,transform,required,notes
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- Envelope ---
-date,date,utm,webfilter,event.created,epoch_to_iso,true,
-time,date,utm,webfilter,@timestamp,epoch_to_iso,true,
+date,date,utm,webfilter,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,utm,webfilter,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,utm,webfilter,event.start,epoch_to_iso,false,"Timestamp Unix em nanosegundos — fonte primária quando presente"
 logid,string,utm,webfilter,event.code,copy,true,"Ex: 0315012544"
 eventtype,string,utm,webfilter,event.action,to_lowercase,true,"urlfilter, ftgd_allow, ftgd_blk, urlmonitor..."
@@ -87,8 +87,8 @@ _enrichment_related_user,string,utm,webfilter,related.user,derived,false,"[user.
 # Fonte: docs.fortinet.com/document/fortigate/7.6.4/fortios-log-message-reference/35537
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,utm,app-ctrl,event.created,epoch_to_iso,true,
-time,date,utm,app-ctrl,@timestamp,epoch_to_iso,true,
+date,date,utm,app-ctrl,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,utm,app-ctrl,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,utm,app-ctrl,event.start,epoch_to_iso,false,"No FortiOS 7.6 pode vir em segundos (Unix epoch) — normalizar no VRL"
 logid,string,utm,app-ctrl,event.code,copy,true,"Ex: 1059028704"
 eventtype,string,utm,app-ctrl,event.action,to_lowercase,true,"app-ctrl-all"
