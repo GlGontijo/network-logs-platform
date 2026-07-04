@@ -1,0 +1,318 @@
+vendor_field,vendor_type,fgt_type,fgt_subtype,ecs_field,transform,required,notes
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=utm, subtype=ips
+# Classe legal: SEGURANÇA — sem obrigação direta do Marco Civil; retenção por
+# política interna (recomendado: 90 dias, alinhado ao ciclo de resposta a incidentes)
+# Fonte: docs.fortinet.com/document/fortigate/7.0.7/administration-guide/535363
+#        docs.fortinet.com/document/fortigate/6.2.0/cookbook/986892/sample-logs-by-log-type
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,utm,ips,event.created,epoch_to_iso,true,
+time,date,utm,ips,@timestamp,epoch_to_iso,true,
+eventtime,date,utm,ips,event.start,epoch_to_iso,false,
+logid,string,utm,ips,event.code,copy,true,"Ex: 0419016384"
+eventtype,string,utm,ips,event.action,to_lowercase,true,"signature ou anomaly"
+type,string,utm,ips,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,utm,ips,event.category,derived,true,"Mapeado para ['intrusion_detection']"
+level,string,utm,ips,log.level,copy,false,"alert, critical..."
+vd,string,utm,ips,labels.fgt_vd,copy,false,
+msg,string,utm,ips,message,copy,false,
+
+# --- Origem e destino ---
+srcip,ip,utm,ips,source.ip,ip_validate,true,"IP de origem do ataque/anomalia detectada"
+srcport,integer,utm,ips,source.port,to_int,false,
+srcintf,string,utm,ips,observer.ingress.interface.name,copy,false,
+srccountry,string,utm,ips,source.geo.country_name,copy,false,
+dstip,ip,utm,ips,destination.ip,ip_validate,true,
+dstport,integer,utm,ips,destination.port,to_int,false,
+dstintf,string,utm,ips,observer.egress.interface.name,copy,false,
+direction,string,utm,ips,network.direction,to_lowercase,false,"incoming/outgoing — direção do ataque, mapear para inbound/outbound no VRL"
+
+# --- A assinatura/ameaça detectada (o motivo deste log existir) ---
+attack,string,utm,ips,rule.name,copy,true,"Nome da assinatura IPS ou padrão de anomalia (ex: 'Adobe.Flash.newfunction...')"
+attackid,string,utm,ips,rule.id,copy,true,"ID da assinatura — keyword no ECS"
+severity,string,utm,ips,labels.fgt_severity,copy,true,"critical/high/medium/low/info"
+ref,string,utm,ips,rule.reference,copy,false,"URL de referência da assinatura (fortinet.com/ids/VID...)"
+profile,string,utm,ips,rule.ruleset,copy,false,"Nome do sensor IPS aplicado"
+attackcontext,string,utm,ips,labels.fgt_attackcontext,discard,false,"Payload capturado do ataque — potencialmente sensível/grande; descartado por padrão"
+count,integer,utm,ips,labels.fgt_anomaly_count,to_int,false,"Contagem de ocorrências — presente em logs de anomaly"
+
+# --- Ação e política ---
+action,string,utm,ips,event.outcome,conditional,true,"dropped/blocked/clear_session → success (mitigado); detected/pass → failure (não bloqueado)"
+policyid,string,utm,ips,rule.id,discard,false,"Redundante com attackid como identificador principal; policyid do firewall mantido apenas se necessário via labels"
+policytype,string,utm,ips,labels.fgt_policytype,copy,false,"policy ou DoS-policy"
+
+# --- Sessão e protocolo ---
+sessionid,string,utm,ips,event.id,copy,false,
+proto,string,utm,ips,network.iana_number,copy,false,
+service,string,utm,ips,network.protocol,to_lowercase,false,
+hostname,string,utm,ips,url.domain,to_lowercase,false,"Presente quando o ataque envolve HTTP"
+url,string,utm,ips,url.path,copy,false,
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,utm,ips,observer.ip,derived,true,
+_enrichment_observer_hostname,string,utm,ips,observer.hostname,derived,true,
+_enrichment_observer_type,string,utm,ips,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,utm,ips,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,utm,ips,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,utm,ips,related.ip,derived,true,"Array [source.ip, destination.ip]"
+_enrichment_event_kind_alert,string,utm,ips,event.kind,derived,false,"Sobrescrito para 'alert' quando severity=critical|high — decisão tomada no VRL"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=utm, subtype=virus (antivírus)
+# Classe legal: SEGURANÇA — retenção por política interna
+# Fonte: docs.fortinet.com/document/fortigate/6.2.3/fortios-log-message-reference/807724
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,utm,virus,event.created,epoch_to_iso,true,
+time,date,utm,virus,@timestamp,epoch_to_iso,true,
+eventtime,date,utm,virus,event.start,epoch_to_iso,false,
+logid,string,utm,virus,event.code,copy,true,"Ex: 0211008192"
+eventtype,string,utm,virus,event.action,to_lowercase,true,"infected"
+type,string,utm,virus,event.kind,derived,true,"Valor fixo: 'alert'"
+subtype,string,utm,virus,event.category,derived,true,"Mapeado para ['malware']"
+level,string,utm,virus,log.level,copy,false,
+vd,string,utm,virus,labels.fgt_vd,copy,false,
+msg,string,utm,virus,message,copy,false,"Ex: 'File is infected.'"
+
+# --- Origem e destino ---
+srcip,ip,utm,virus,source.ip,ip_validate,true,"IP de quem baixou/enviou o arquivo infectado"
+srcport,integer,utm,virus,source.port,to_int,false,
+srcintf,string,utm,virus,observer.ingress.interface.name,copy,false,
+dstip,ip,utm,virus,destination.ip,ip_validate,true,
+dstport,integer,utm,virus,destination.port,to_int,false,
+dstintf,string,utm,virus,observer.egress.interface.name,copy,false,
+direction,string,utm,virus,network.direction,to_lowercase,false,"incoming/outgoing"
+user,string,utm,virus,user.name,conditional,false,"Vazio quando sem autenticação — descartar string vazia no VRL"
+
+# --- A ameaça detectada (o motivo deste log existir) ---
+virus,string,utm,virus,labels.fgt_virus_name,copy,true,"Nome da ameaça (ex: 'EICAR_TEST_FILE')"
+virusid,string,utm,virus,rule.id,copy,false,"ID interno FortiGuard da assinatura de vírus — keyword"
+dtype,string,utm,virus,labels.fgt_virus_dtype,copy,false,"Tipo de detecção: Virus, Grayware, Riskware..."
+filename,string,utm,virus,file.name,copy,true,"Nome do arquivo infectado"
+filesize,integer,utm,virus,file.size,to_int,false,
+checksum,string,utm,virus,file.hash.md5,discard,false,"Formato do checksum não confirmado como MD5 puro; descartado até validação — usar file.hash.md5 quando confirmado"
+quarskip,string,utm,virus,labels.fgt_quarskip,copy,false,"Motivo de não quarentena, quando aplicável"
+ref,string,utm,virus,rule.reference,copy,false,"URL de referência da ameaça"
+analyticscksum,string,utm,virus,file.hash.sha256,copy,false,"Confirmado como SHA-256 pelo tamanho do hash (64 hex chars)"
+analyticssubmit,string,utm,virus,labels.fgt_analyticssubmit,copy,false,"Se o arquivo foi enviado para FortiSandbox"
+
+# --- Ação e sessão ---
+action,string,utm,virus,event.outcome,conditional,true,"blocked → success (ameaça contida); passed/monitored → failure"
+service,string,utm,virus,network.protocol,to_lowercase,false,
+sessionid,string,utm,virus,event.id,copy,false,
+policyid,string,utm,virus,rule.id,discard,false,"Redundante com virusid; manter apenas virusid como identificador principal"
+profile,string,utm,virus,rule.ruleset,copy,false,"Perfil de antivírus aplicado"
+url,string,utm,virus,url.original,copy,false,"URL completa de onde o arquivo veio"
+agent,string,utm,virus,user_agent.original,copy,false,"User-Agent do cliente que baixou o arquivo"
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,utm,virus,observer.ip,derived,true,
+_enrichment_observer_hostname,string,utm,virus,observer.hostname,derived,true,
+_enrichment_observer_type,string,utm,virus,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,utm,virus,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,utm,virus,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,utm,virus,related.ip,derived,true,"Array [source.ip, destination.ip]"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=utm, subtype=dlp (Data Leak/Loss Prevention)
+# Classe legal: SEGURANÇA — retenção por política interna
+# Fonte: docs.fortinet.com/document/fortigate/6.2.0/cookbook/986892/sample-logs-by-log-type
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,utm,dlp,event.created,epoch_to_iso,true,
+time,date,utm,dlp,@timestamp,epoch_to_iso,true,
+eventtime,date,utm,dlp,event.start,epoch_to_iso,false,
+logid,string,utm,dlp,event.code,copy,true,"Ex: 0954024576"
+eventtype,string,utm,dlp,event.action,to_lowercase,true,"dlp"
+type,string,utm,dlp,event.kind,derived,true,"Valor fixo: 'alert'"
+subtype,string,utm,dlp,event.category,derived,true,"Mapeado para ['file']"
+level,string,utm,dlp,log.level,copy,false,
+epoch,string,utm,dlp,labels.fgt_dlp_epoch,discard,false,"Campo interno de agrupamento DLP — sem valor de análise fora do FortiGate"
+eventid,string,utm,dlp,labels.fgt_dlp_eventid,copy,false,
+
+# --- Origem e destino ---
+srcip,ip,utm,dlp,source.ip,ip_validate,true,"IP de quem transferiu o arquivo/dado sensível"
+srcport,integer,utm,dlp,source.port,to_int,false,
+srcintf,string,utm,dlp,observer.ingress.interface.name,copy,false,
+dstip,ip,utm,dlp,destination.ip,ip_validate,true,
+dstport,integer,utm,dlp,destination.port,to_int,false,
+dstintf,string,utm,dlp,observer.egress.interface.name,copy,false,
+direction,string,utm,dlp,network.direction,to_lowercase,false,
+
+# --- O que foi detectado (o motivo deste log existir) ---
+filteridx,integer,utm,dlp,labels.fgt_dlp_filteridx,to_int,false,
+filtertype,string,utm,dlp,labels.fgt_dlp_filtertype,copy,false,"file-type, watermark, regex..."
+filtercat,string,utm,dlp,labels.fgt_dlp_filtercat,copy,false,"file, message..."
+dlpextra,string,utm,dlp,labels.fgt_dlp_extra,copy,false,"Detalhe extra da regra disparada"
+filename,string,utm,dlp,file.name,copy,false,
+filesize,integer,utm,dlp,file.size,to_int,false,
+filetype,string,utm,dlp,file.extension,to_lowercase,false,
+profile,string,utm,dlp,rule.ruleset,copy,false,"Nome do perfil DLP aplicado"
+severity,string,utm,dlp,labels.fgt_severity,copy,false,"critical/high/medium/low"
+
+# --- Ação e contexto ---
+action,string,utm,dlp,event.outcome,conditional,true,"block → success (vazamento evitado); log-only/allow → failure"
+hostname,string,utm,dlp,url.domain,to_lowercase,false,
+url,string,utm,dlp,url.path,copy,false,
+service,string,utm,dlp,network.protocol,to_lowercase,false,
+sessionid,string,utm,dlp,event.id,copy,false,
+policyid,string,utm,dlp,rule.id,copy,false,"ID da política de firewall associada — keyword"
+agent,string,utm,dlp,user_agent.original,copy,false,
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,utm,dlp,observer.ip,derived,true,
+_enrichment_observer_hostname,string,utm,dlp,observer.hostname,derived,true,
+_enrichment_observer_type,string,utm,dlp,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,utm,dlp,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,utm,dlp,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,utm,dlp,related.ip,derived,true,"Array [source.ip, destination.ip]"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=utm, subtype=emailfilter
+# Classe legal: SEGURANÇA — retenção por política interna
+# Nota: campos confirmados via estrutura genérica FortiOS + Log Reference 5.2.x/6.4.x
+# (banned word, group, session, service, size — estrutura estável entre versões)
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,utm,emailfilter,event.created,epoch_to_iso,true,
+time,date,utm,emailfilter,@timestamp,epoch_to_iso,true,
+eventtime,date,utm,emailfilter,event.start,epoch_to_iso,false,
+logid,string,utm,emailfilter,event.code,copy,true,
+eventtype,string,utm,emailfilter,event.action,to_lowercase,false,
+type,string,utm,emailfilter,event.kind,derived,true,"Valor fixo: 'alert'"
+subtype,string,utm,emailfilter,event.category,derived,true,"Mapeado para ['email']"
+level,string,utm,emailfilter,log.level,copy,false,
+vd,string,utm,emailfilter,labels.fgt_vd,copy,false,
+
+# --- Origem e destino ---
+srcip,ip,utm,emailfilter,source.ip,ip_validate,true,"IP do servidor/cliente de e-mail de origem"
+srcport,integer,utm,emailfilter,source.port,to_int,false,
+srcintf,string,utm,emailfilter,observer.ingress.interface.name,copy,false,
+dstip,ip,utm,emailfilter,destination.ip,ip_validate,false,
+dstport,integer,utm,emailfilter,destination.port,to_int,false,
+group,string,utm,emailfilter,labels.fgt_group,conditional,false,"'N/A' descartado"
+
+# --- O que foi detectado ---
+bword,string,utm,emailfilter,labels.fgt_banned_word,copy,false,"Palavra/padrão banido que disparou o filtro"
+size,integer,utm,emailfilter,labels.fgt_email_size,to_int,false,"Tamanho do e-mail em bytes"
+profile,string,utm,emailfilter,rule.ruleset,copy,false,"Perfil de emailfilter aplicado"
+
+# --- Ação e sessão ---
+action,string,utm,emailfilter,event.outcome,conditional,false,"block → success; pass/tag → failure"
+service,string,utm,emailfilter,network.protocol,to_lowercase,false,"smtp, pop3, imap"
+proto,string,utm,emailfilter,network.iana_number,copy,false,
+sessionid,string,utm,emailfilter,event.id,copy,false,
+policyid,string,utm,emailfilter,rule.id,copy,false,
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,utm,emailfilter,observer.ip,derived,true,
+_enrichment_observer_hostname,string,utm,emailfilter,observer.hostname,derived,true,
+_enrichment_observer_type,string,utm,emailfilter,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,utm,emailfilter,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,utm,emailfilter,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,utm,emailfilter,related.ip,derived,true,"Array [source.ip, destination.ip]"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=event, subtype=system
+# Classe legal: OPERACIONAL — retenção por política interna
+# Fonte: docs.fortinet.com/document/fortigate/7.0.1/fortios-log-message-reference/463430
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,event,system,event.created,epoch_to_iso,true,
+time,date,event,system,@timestamp,epoch_to_iso,true,
+eventtime,date,event,system,event.start,epoch_to_iso,false,
+logid,string,event,system,event.code,copy,true,"Ex: 0100032002"
+type,string,event,system,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,event,system,event.category,derived,true,"Mapeado para ['configuration','process']"
+level,string,event,system,log.level,copy,false,"alert, notice, information..."
+vd,string,event,system,labels.fgt_vd,copy,false,
+logdesc,string,event,system,event.reason,copy,false,"Ex: 'Admin login failed'"
+msg,string,event,system,message,copy,false,
+
+# --- Identidade e origem (ex: login administrativo) ---
+user,string,event,system,user.name,conditional,false,"Ex: 'admin1'; ausente em eventos não relacionados a login"
+ui,string,event,system,labels.fgt_ui,copy,false,"Origem da interface de acesso: https(IP), ssh(IP)..."
+method,string,event,system,labels.fgt_auth_method,copy,false,"https, ssh, telnet..."
+srcip,ip,event,system,source.ip,ip_validate,false,"IP de origem do evento administrativo, quando aplicável"
+dstip,ip,event,system,destination.ip,ip_validate,false,
+
+# --- Ação e resultado ---
+action,string,event,system,event.action,copy,true,"login, logout, reboot, config-change..."
+status,string,event,system,event.outcome,conditional,false,"success → success; failed → failure"
+reason,string,event,system,event.reason,conditional,false,"'N/A' descartado; motivo de falha (ex: 'name_invalid')"
+sn,string,event,system,labels.fgt_serial_number,discard,false,"Número de série — redundante com observer.serial_number quando presente no envelope global"
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,event,system,observer.ip,derived,true,
+_enrichment_observer_hostname,string,event,system,observer.hostname,derived,true,
+_enrichment_observer_type,string,event,system,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,event,system,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,event,system,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,event,system,related.ip,derived,false,"Array [source.ip, destination.ip] quando presentes"
+_enrichment_related_user,string,event,system,related.user,derived,false,"[user.name] quando presente"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=event, subtype=wireless
+# Classe legal: OPERACIONAL — retenção por política interna
+# Nota: estrutura de campos baseada no envelope padrão FortiOS + campos
+# específicos de WiFi Controller documentados nos guias FortiAP (ap, vap/ssid,
+# client MAC, radio). Confiança menor que os subtypes acima — validar contra
+# logs reais de produção antes de considerar definitivo.
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,event,wireless,event.created,epoch_to_iso,true,
+time,date,event,wireless,@timestamp,epoch_to_iso,true,
+eventtime,date,event,wireless,event.start,epoch_to_iso,false,
+logid,string,event,wireless,event.code,copy,true,
+type,string,event,wireless,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,event,wireless,event.category,derived,true,"Mapeado para ['network']"
+level,string,event,wireless,log.level,copy,false,
+vd,string,event,wireless,labels.fgt_vd,copy,false,
+action,string,event,wireless,event.action,copy,false,"ap-connect, ap-disconnect, sta-connect, sta-disconnect, rogue-detected..."
+msg,string,event,wireless,message,copy,false,
+
+# --- Identificação do AP e cliente ---
+ap,string,event,wireless,labels.fgt_ap_name,copy,false,"Nome/serial do FortiAP envolvido"
+vap,string,event,wireless,labels.fgt_ssid,copy,false,"SSID (Virtual AP) envolvido"
+radioid,string,event,wireless,labels.fgt_radio_id,copy,false,"Rádio 1 ou 2 do AP"
+stamac,mac,event,wireless,source.mac,copy,false,"MAC do cliente wireless (estação) — VALIDAR nome exato do campo contra log real"
+staip,ip,event,wireless,source.ip,ip_validate,false,"IP do cliente, quando disponível — VALIDAR nome exato do campo"
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,event,wireless,observer.ip,derived,true,
+_enrichment_observer_hostname,string,event,wireless,observer.hostname,derived,true,
+_enrichment_observer_type,string,event,wireless,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,event,wireless,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,event,wireless,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=event, subtype=ha (High Availability)
+# Classe legal: OPERACIONAL — retenção por política interna
+# Fonte: community.fortinet.com — logs reais de failover HA (campos estáveis
+# desde FortiOS 4.0, confirmados presentes também em versões recentes)
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,event,ha,event.created,epoch_to_iso,true,
+time,date,event,ha,@timestamp,epoch_to_iso,true,
+eventtime,date,event,ha,event.start,epoch_to_iso,false,
+logid,string,event,ha,event.code,copy,true,"Ex: 0105037901"
+type,string,event,ha,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,event,ha,event.category,derived,true,"Mapeado para ['process']"
+level,string,event,ha,log.level,copy,false,"critical em failovers"
+vd,string,event,ha,labels.fgt_vd,copy,false,
+msg,string,event,ha,message,copy,false,"Ex: 'Heartbeat device(interface) down'"
+
+# --- O evento HA em si (o motivo deste log existir) ---
+ha_role,string,event,ha,labels.fgt_ha_role,copy,true,"master ou slave — qual papel o firewall tinha no momento"
+hbdn_reason,string,event,ha,event.reason,copy,false,"Motivo da perda de heartbeat (ex: 'neighbor info lost')"
+devintfname,string,event,ha,observer.ingress.interface.name,copy,false,"Interface de heartbeat afetada (ex: 'wan1')"
+action,string,event,ha,event.action,derived,true,"Valor fixo: 'ha-failover' — este log em si já representa um evento de failover"
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,event,ha,observer.ip,derived,true,
+_enrichment_observer_hostname,string,event,ha,observer.hostname,derived,true,
+_enrichment_observer_type,string,event,ha,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,event,ha,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,event,ha,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_event_kind_alert,string,event,ha,event.kind,derived,false,"Sobrescrito para 'alert' quando level=critical — decisão tomada no VRL"
