@@ -7,8 +7,8 @@ vendor_field,vendor_type,fgt_type,fgt_subtype,ecs_field,transform,required,notes
 #        docs.fortinet.com/document/fortigate/6.2.0/cookbook/986892/sample-logs-by-log-type
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,utm,ips,event.created,epoch_to_iso,true,
-time,date,utm,ips,@timestamp,epoch_to_iso,true,
+date,date,utm,ips,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,utm,ips,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,utm,ips,event.start,epoch_to_iso,false,
 logid,string,utm,ips,event.code,copy,true,"Ex: 0419016384"
 eventtype,string,utm,ips,event.action,to_lowercase,true,"signature ou anomaly"
@@ -64,8 +64,8 @@ _enrichment_event_kind_alert,string,utm,ips,event.kind,derived,false,"Sobrescrit
 # Fonte: docs.fortinet.com/document/fortigate/6.2.3/fortios-log-message-reference/807724
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,utm,virus,event.created,epoch_to_iso,true,
-time,date,utm,virus,@timestamp,epoch_to_iso,true,
+date,date,utm,virus,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,utm,virus,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,utm,virus,event.start,epoch_to_iso,false,
 logid,string,utm,virus,event.code,copy,true,"Ex: 0211008192"
 eventtype,string,utm,virus,event.action,to_lowercase,true,"infected"
@@ -120,8 +120,8 @@ _enrichment_related_ip,ip,utm,virus,related.ip,derived,true,"Array [source.ip, d
 # Fonte: docs.fortinet.com/document/fortigate/6.2.0/cookbook/986892/sample-logs-by-log-type
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,utm,dlp,event.created,epoch_to_iso,true,
-time,date,utm,dlp,@timestamp,epoch_to_iso,true,
+date,date,utm,dlp,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,utm,dlp,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,utm,dlp,event.start,epoch_to_iso,false,
 logid,string,utm,dlp,event.code,copy,true,"Ex: 0954024576"
 eventtype,string,utm,dlp,event.action,to_lowercase,true,"dlp"
@@ -175,8 +175,8 @@ _enrichment_related_ip,ip,utm,dlp,related.ip,derived,true,"Array [source.ip, des
 # (banned word, group, session, service, size — estrutura estável entre versões)
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,utm,emailfilter,event.created,epoch_to_iso,true,
-time,date,utm,emailfilter,@timestamp,epoch_to_iso,true,
+date,date,utm,emailfilter,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,utm,emailfilter,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,utm,emailfilter,event.start,epoch_to_iso,false,
 logid,string,utm,emailfilter,event.code,copy,true,
 eventtype,string,utm,emailfilter,event.action,to_lowercase,false,
@@ -219,8 +219,8 @@ _enrichment_related_ip,ip,utm,emailfilter,related.ip,derived,true,"Array [source
 # Fonte: docs.fortinet.com/document/fortigate/7.0.1/fortios-log-message-reference/463430
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,event,system,event.created,epoch_to_iso,true,
-time,date,event,system,@timestamp,epoch_to_iso,true,
+date,date,event,system,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,event,system,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,event,system,event.start,epoch_to_iso,false,
 logid,string,event,system,event.code,copy,true,"Ex: 0100032002"
 type,string,event,system,event.kind,derived,true,"Valor fixo: 'event'"
@@ -231,7 +231,7 @@ logdesc,string,event,system,event.reason,copy,false,"Ex: 'Admin login failed'"
 msg,string,event,system,message,copy,false,
 
 # --- Identidade e origem (ex: login administrativo) ---
-user,string,event,system,user.name,conditional,false,"Ex: 'admin1'; ausente em eventos não relacionados a login"
+user,string,event,system,user.name,copy,false,"Ex: 'admin1'; ausente em eventos não relacionados a login"
 ui,string,event,system,labels.fgt_ui,copy,false,"Origem da interface de acesso: https(IP), ssh(IP)..."
 method,string,event,system,labels.fgt_auth_method,copy,false,"https, ssh, telnet..."
 srcip,ip,event,system,source.ip,ip_validate,false,"IP de origem do evento administrativo, quando aplicável"
@@ -261,8 +261,8 @@ _enrichment_related_user,string,event,system,related.user,derived,false,"[user.n
 # logs reais de produção antes de considerar definitivo.
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,event,wireless,event.created,epoch_to_iso,true,
-time,date,event,wireless,@timestamp,epoch_to_iso,true,
+date,date,event,wireless,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,event,wireless,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,event,wireless,event.start,epoch_to_iso,false,
 logid,string,event,wireless,event.code,copy,true,
 type,string,event,wireless,event.kind,derived,true,"Valor fixo: 'event'"
@@ -293,8 +293,8 @@ _enrichment_observer_product,string,event,wireless,observer.product,derived,true
 # desde FortiOS 4.0, confirmados presentes também em versões recentes)
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,event,ha,event.created,epoch_to_iso,true,
-time,date,event,ha,@timestamp,epoch_to_iso,true,
+date,date,event,ha,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,event,ha,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,event,ha,event.start,epoch_to_iso,false,
 logid,string,event,ha,event.code,copy,true,"Ex: 0105037901"
 type,string,event,ha,event.kind,derived,true,"Valor fixo: 'event'"
