@@ -1,0 +1,171 @@
+vendor_field,vendor_type,fgt_type,fgt_subtype,ecs_field,transform,required,notes
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=traffic (subtype=forward|local|multicast|sniffer)
+# Classe legal: Registro de CONEXÃO (Marco Civil art. 13) — retenção 12 meses
+# Fonte: docs.fortinet.com/document/fortigate/7.6.x/fortios-log-message-reference
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- Envelope / identificação do log ---
+date,date,traffic,*,event.created,epoch_to_iso,true,"Combinado com 'time' no parser antes deste mapeamento; date+time vira @timestamp"
+time,date,traffic,*,@timestamp,epoch_to_iso,true,"date+time juntos formam o timestamp original do FortiGate"
+eventtime,date,traffic,*,event.start,epoch_to_iso,false,"Timestamp Unix em nanosegundos; usar como fonte primária de tempo quando presente"
+logid,string,traffic,*,event.code,copy,true,"Identificador do tipo de mensagem de log do FortiOS"
+type,string,traffic,*,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,traffic,*,event.category,derived,true,"Mapeado para ['network','session'] no VRL"
+level,string,traffic,*,log.level,copy,false,"notice, warning, error, etc."
+vd,string,traffic,*,labels.fgt_vd,copy,false,"Virtual Domain — campo custom FortiGate fora do ECS; armazenado em labels"
+
+# --- Origem (source) ---
+srcip,ip,traffic,*,source.ip,ip_validate,true,"Endereço IP de origem — campo central para conformidade Marco Civil"
+srcport,integer,traffic,*,source.port,to_int,true,
+srcintf,string,traffic,*,observer.ingress.interface.name,copy,false,"Interface física de entrada no firewall"
+srcintfrole,string,traffic,*,labels.fgt_srcintfrole,copy,false,"Papel da interface de origem: undefined, lan, wan, dmz"
+srcname,string,traffic,*,source.domain,copy,false,"Hostname resolvido do IP de origem"
+srcmac,mac,traffic,*,source.mac,copy,false,"MAC de origem — campo ECS extended; relevante para rastreabilidade de dispositivo"
+mastersrcmac,mac,traffic,*,labels.fgt_mastersrcmac,discard,false,"MAC do gateway em topologias com proxy ARP — descartado; sem campo ECS direto"
+srccountry,string,traffic,*,source.geo.country_name,copy,false,"GeoIP do FortiGate — pode ser 'Reserved' para IPs privados"
+devtype,string,traffic,*,labels.fgt_devtype,copy,false,"Tipo de dispositivo identificado (ex: Linux PC)"
+osname,string,traffic,*,labels.fgt_osname,copy,false,"SO identificado no dispositivo via fingerprinting"
+
+# --- Destino (destination) ---
+dstip,ip,traffic,*,destination.ip,ip_validate,true,"Endereço IP de destino — campo central para conformidade Marco Civil"
+dstport,integer,traffic,*,destination.port,to_int,true,
+dstintf,string,traffic,*,observer.egress.interface.name,copy,false,"Interface física de saída no firewall"
+dstintfrole,string,traffic,*,labels.fgt_dstintfrole,copy,false,"Papel da interface de destino"
+dstname,string,traffic,*,destination.domain,copy,false,"Hostname resolvido do IP de destino"
+dstcountry,string,traffic,*,destination.geo.country_name,copy,false,"GeoIP do FortiGate"
+
+# --- NAT ---
+trandisp,string,traffic,*,labels.fgt_trandisp,copy,false,"Tipo de NAT: noop, snat, dnat — relevante para auditoria de quem originou a conexão"
+transip,ip,traffic,*,source.nat.ip,ip_validate,false,"IP pós-NAT — essencial para rastrear o usuário real em redes com NAT compartilhado (Marco Civil)"
+transport,integer,traffic,*,source.nat.port,to_int,false,"Porta pós-NAT — mesma justificativa do transip"
+
+# --- Sessão / protocolo ---
+sessionid,string,traffic,*,event.id,copy,true,"ID único de sessão no FortiGate — keyword no ECS, não numérico"
+proto,string,traffic,*,network.iana_number,copy,true,"Número IANA do protocolo — ECS define como keyword (6=TCP, 17=UDP)"
+action,string,traffic,*,event.outcome,conditional,true,"accept/close → success; deny/drop/timeout → failure; mapeado no VRL"
+service,string,traffic,*,network.protocol,to_lowercase,false,"Nome do serviço identificado (HTTPS, DNS...)"
+duration,integer,traffic,*,event.duration,s_to_ns,false,"FortiOS reporta em segundos; ECS exige nanosegundos"
+
+# --- Política / regra ---
+policyid,string,traffic,*,rule.id,copy,true,"ID da política de firewall — ECS define rule.id como keyword"
+policytype,string,traffic,*,labels.fgt_policytype,copy,false,"policy, policy-vpn, etc."
+policymode,string,traffic,*,labels.fgt_policymode,copy,false,"learn — modo de aprendizado de política"
+poluuid,string,traffic,*,labels.fgt_poluuid,discard,false,"UUID da política — descartado; redundante com policyid"
+
+# --- Volume de tráfego ---
+sentbyte,integer,traffic,*,source.bytes,to_int,false,"Bytes enviados pela origem"
+rcvdbyte,integer,traffic,*,destination.bytes,to_int,false,"Bytes enviados pelo destino"
+sentpkt,integer,traffic,*,source.packets,to_int,false,
+rcvdpkt,integer,traffic,*,destination.packets,to_int,false,
+
+# --- Aplicação identificada ---
+appid,integer,traffic,*,labels.fgt_appid,to_int,false,"ID interno FortiGate da aplicação detectada"
+app,string,traffic,*,network.application,to_lowercase,false,"Nome da aplicação (ex: HTTPS.BROWSER)"
+appcat,string,traffic,*,labels.fgt_appcat,copy,false,"Categoria da aplicação (Web.Client, Network.Service)"
+apprisk,string,traffic,*,labels.fgt_apprisk,copy,false,"Risco da aplicação (low/medium/elevated)"
+applist,string,traffic,*,labels.fgt_applist,copy,false,"Nome do perfil de application control aplicado"
+countapp,integer,traffic,*,labels.fgt_countapp,to_int,false,
+
+# --- UTM ---
+utmaction,string,traffic,*,labels.fgt_utmaction,copy,false,"allow/block — ação do perfil UTM na sessão"
+utmref,string,traffic,*,labels.fgt_utmref,copy,false,"Referência cruzada para o log UTM detalhado"
+
+# --- Campos enriquecidos pelo Vector (não vêm do payload syslog) ---
+_enrichment_observer_ip,ip,traffic,*,observer.ip,derived,true,"IP de origem do pacote syslog recebido pelo Vector"
+_enrichment_observer_hostname,string,traffic,*,observer.hostname,derived,true,"Mapeamento IP→hostname: FGT-600F, FGT-200F"
+_enrichment_observer_type,string,traffic,*,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,traffic,*,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,traffic,*,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,traffic,*,related.ip,derived,true,"Array [source.ip, destination.ip, source.nat.ip]"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=event, subtype=vpn (IPsec e SSL-VPN)
+# Classe legal: Registro de CONEXÃO (Marco Civil art. 13) — retenção 12 meses
+# Fonte: docs.fortinet.com/document/fortigate/7.6.6/administration-guide/834425
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,event,vpn,event.created,epoch_to_iso,true,
+time,date,event,vpn,@timestamp,epoch_to_iso,true,
+eventtime,date,event,vpn,event.start,epoch_to_iso,false,"Timestamp Unix em nanosegundos — fonte primária"
+logid,string,event,vpn,event.code,copy,true,"Ex: 0101037138 — tunnel-up, tunnel-down, negotiate..."
+type,string,event,vpn,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,event,vpn,event.category,derived,true,"Mapeado para ['network','session']"
+level,string,event,vpn,log.level,copy,false,
+vd,string,event,vpn,labels.fgt_vd,copy,false,
+logdesc,string,event,vpn,event.reason,copy,false,"Descrição textual do evento"
+msg,string,event,vpn,message,copy,false,
+
+# --- Endpoints do túnel ---
+remip,ip,event,vpn,source.ip,ip_validate,true,"IP remoto (peer) — central para o Marco Civil"
+remport,integer,event,vpn,source.port,to_int,false,"Tipicamente 500 (IKE) ou 4500 (NAT-T)"
+locip,ip,event,vpn,destination.ip,ip_validate,true,"IP local do FortiGate"
+locport,integer,event,vpn,destination.port,to_int,false,
+outintf,string,event,vpn,observer.egress.interface.name,copy,false,
+
+# --- Identidade ---
+user,string,event,vpn,user.name,conditional,false,"'N/A' descartado no VRL"
+group,string,event,vpn,labels.fgt_group,conditional,false,"'N/A' descartado — ECS user.group.name não está no sample; usar labels"
+xauthuser,string,event,vpn,user.name,discard,false,"Redundante com 'user' em IPsec XAuth"
+xauthgroup,string,event,vpn,labels.fgt_group,discard,false,
+assignip,ip,event,vpn,destination.nat.ip,ip_validate,false,"IP interno atribuído ao cliente VPN — correlação Marco Civil"
+
+# --- Túnel e sessão ---
+vpntunnel,string,event,vpn,network.name,copy,false,"Nome do túnel configurado"
+tunnelid,string,event,vpn,event.id,copy,true,"ID único do túnel — keyword no ECS"
+tunneltype,string,event,vpn,network.type,to_lowercase,false,"ipsec ou ssl-tunnel"
+tunnelip,ip,event,vpn,source.nat.ip,ip_validate,false,"IP virtual do túnel; 'N/A' descartado no VRL"
+action,string,event,vpn,event.action,copy,true,"tunnel-up, tunnel-down, negotiate, tunnel-stats..."
+
+# --- Volume ---
+duration,integer,event,vpn,event.duration,s_to_ns,false,
+sentbyte,integer,event,vpn,source.bytes,to_int,false,
+rcvdbyte,integer,event,vpn,destination.bytes,to_int,false,
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,event,vpn,observer.ip,derived,true,
+_enrichment_observer_hostname,string,event,vpn,observer.hostname,derived,true,
+_enrichment_observer_type,string,event,vpn,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,event,vpn,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,event,vpn,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,event,vpn,related.ip,derived,true,"Array [source.ip, destination.ip, destination.nat.ip]"
+_enrichment_related_user,string,event,vpn,related.user,derived,false,"[user.name] quando diferente de 'N/A'"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=event, subtype=user (autenticação)
+# Classe legal: Registro de CONEXÃO (Marco Civil art. 13) — retenção 12 meses
+# Fonte: docs.fortinet.com/document/fortigate/7.0.1/fortios-log-message-reference
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,event,user,event.created,epoch_to_iso,true,
+time,date,event,user,@timestamp,epoch_to_iso,true,
+eventtime,date,event,user,event.start,epoch_to_iso,false,
+logid,string,event,user,event.code,copy,true,"Ex: 0102043008 — sucesso/falha de autenticação"
+type,string,event,user,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,event,user,event.category,derived,true,"Mapeado para ['authentication']"
+level,string,event,user,log.level,copy,false,
+vd,string,event,user,labels.fgt_vd,copy,false,
+logdesc,string,event,user,event.reason,copy,false,
+msg,string,event,user,message,copy,false,
+
+# --- Identidade e origem ---
+srcip,ip,event,user,source.ip,ip_validate,true,"IP da tentativa de autenticação — central para o Marco Civil"
+dstip,ip,event,user,destination.ip,ip_validate,false,"IP do serviço autenticado"
+user,string,event,user,user.name,conditional,true,"'N/A' descartado"
+group,string,event,user,labels.fgt_group,conditional,false,"'N/A' descartado"
+interface,string,event,user,observer.ingress.interface.name,copy,false,
+authproto,string,event,user,network.protocol,conditional,false,"Formato 'TELNET(10.1.100.11)' — extrair protocolo antes do parêntese no VRL"
+
+# --- Resultado ---
+action,string,event,user,event.action,copy,true,"'authentication'"
+status,string,event,user,event.outcome,conditional,true,"success → success; failed → failure"
+reason,string,event,user,event.reason,conditional,false,"Motivo da falha; 'N/A' descartado"
+
+# --- Enriquecimento Vector ---
+_enrichment_observer_ip,ip,event,user,observer.ip,derived,true,
+_enrichment_observer_hostname,string,event,user,observer.hostname,derived,true,
+_enrichment_observer_type,string,event,user,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,event,user,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,event,user,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,event,user,related.ip,derived,true,"Array [source.ip, destination.ip]"
+_enrichment_related_user,string,event,user,related.user,derived,false,"[user.name] quando presente"
