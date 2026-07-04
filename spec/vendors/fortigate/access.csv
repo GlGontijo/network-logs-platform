@@ -1,0 +1,138 @@
+vendor_field,vendor_type,fgt_type,fgt_subtype,ecs_field,transform,required,notes
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=utm, subtype=webfilter
+# Classe legal: Registro de ACESSO A APLICAÇÃO (Marco Civil art. 15) — retenção 6 meses
+# Justificativa: registra qual URL/hostname foi acessado a partir de um IP —
+# é exatamente a definição legal de "acesso a aplicação de internet".
+# Fonte: docs.fortinet.com/document/fortigate/7.6.3/administration-guide/371670/static-url-filter
+#        docs.sekoia.com/integration/categories/network_security/fortigate/
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- Envelope ---
+date,date,utm,webfilter,event.created,epoch_to_iso,true,
+time,date,utm,webfilter,@timestamp,epoch_to_iso,true,
+eventtime,date,utm,webfilter,event.start,epoch_to_iso,false,"Timestamp Unix em nanosegundos — fonte primária quando presente"
+logid,string,utm,webfilter,event.code,copy,true,"Ex: 0315012544"
+eventtype,string,utm,webfilter,event.action,to_lowercase,true,"urlfilter, ftgd_allow, ftgd_blk, urlmonitor..."
+type,string,utm,webfilter,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,utm,webfilter,event.category,derived,true,"Mapeado para ['web'] no VRL"
+level,string,utm,webfilter,log.level,copy,false,
+vd,string,utm,webfilter,labels.fgt_vd,copy,false,"Virtual Domain"
+msg,string,utm,webfilter,message,copy,false,"Ex: 'URL was blocked because it is in the URL filter list'"
+
+# --- Origem ---
+srcip,ip,utm,webfilter,source.ip,ip_validate,true,"IP de quem acessou a URL — campo central para o Marco Civil"
+srcport,integer,utm,webfilter,source.port,to_int,false,
+srcintf,string,utm,webfilter,observer.ingress.interface.name,copy,false,
+srcintfrole,string,utm,webfilter,labels.fgt_srcintfrole,copy,false,
+srccountry,string,utm,webfilter,source.geo.country_name,copy,false,"GeoIP do FortiGate"
+user,string,utm,webfilter,user.name,conditional,false,"Presente apenas com autenticação de usuário ativa; 'N/A' descartado no VRL"
+group,string,utm,webfilter,labels.fgt_group,conditional,false,"'N/A' descartado"
+authserver,string,utm,webfilter,labels.fgt_authserver,copy,false,"Servidor de autenticação usado (ex: LDAP, RADIUS)"
+
+# --- Destino ---
+dstip,ip,utm,webfilter,destination.ip,ip_validate,true,"IP do servidor de destino"
+dstport,integer,utm,webfilter,destination.port,to_int,true,
+dstintf,string,utm,webfilter,observer.egress.interface.name,copy,false,
+dstintfrole,string,utm,webfilter,labels.fgt_dstintfrole,copy,false,
+dstcountry,string,utm,webfilter,destination.geo.country_name,copy,false,
+
+# --- A aplicação acessada em si (o motivo deste arquivo existir) ---
+hostname,string,utm,webfilter,url.domain,to_lowercase,true,"Domínio acessado — campo mais importante deste log para o Marco Civil"
+url,string,utm,webfilter,url.path,copy,true,"Path da URL; em alguns eventtypes vem a URL completa — normalizar no VRL com url.original"
+forwardedfor,ip,utm,webfilter,network.forwarded_ip,ip_validate,false,"IP original quando o FortiGate está atrás de um proxy reverso (X-Forwarded-For)"
+method,string,utm,webfilter,labels.fgt_method,copy,false,"domain ou ip — como a categorização foi feita"
+cat,string,utm,webfilter,labels.fgt_category_id,copy,false,"ID numérico da categoria FortiGuard"
+catdesc,string,utm,webfilter,labels.fgt_category_desc,copy,false,"Descrição da categoria (ex: 'Government and Legal Organizations')"
+reqtype,string,utm,webfilter,labels.fgt_reqtype,copy,false,"direct ou referral"
+
+# --- Ação e política ---
+profile,string,utm,webfilter,rule.name,copy,false,"Nome do perfil de webfilter aplicado (ex: 'webfilter', 'monitor-all')"
+action,string,utm,webfilter,event.outcome,conditional,true,"passthrough/allowed → success; blocked/blk → failure; mapeado no VRL"
+policyid,string,utm,webfilter,rule.id,copy,true,"ID da política de firewall — keyword no ECS"
+policytype,string,utm,webfilter,labels.fgt_policytype,copy,false,"policy ou proxy-policy"
+urlsource,string,utm,webfilter,labels.fgt_urlsource,copy,false,"Ex: 'Local URLfilter Block' — origem da decisão de bloqueio"
+urlfilteridx,integer,utm,webfilter,labels.fgt_urlfilteridx,to_int,false,
+urlfilterlist,string,utm,webfilter,labels.fgt_urlfilterlist,copy,false,
+
+# --- Sessão e protocolo ---
+sessionid,string,utm,webfilter,event.id,copy,true,"ID de sessão — keyword no ECS"
+proto,string,utm,webfilter,network.iana_number,copy,false,"6=TCP, 17=UDP"
+service,string,utm,webfilter,network.protocol,to_lowercase,false,"HTTP, HTTPS"
+direction,string,utm,webfilter,network.direction,to_lowercase,false,"outgoing/incoming — ECS espera inbound/outbound; mapear no VRL"
+
+# --- Volume ---
+sentbyte,integer,utm,webfilter,source.bytes,to_int,false,
+rcvdbyte,integer,utm,webfilter,destination.bytes,to_int,false,
+
+# --- Content Rating (crscore/craction/crlevel — pontuação de risco do conteúdo) ---
+crscore,integer,utm,webfilter,event.risk_score,to_int,false,"Pontuação numérica de risco do conteúdo — compatível com event.risk_score (float)"
+craction,string,utm,webfilter,labels.fgt_craction,copy,false,"Bitmask da ação de content rating"
+crlevel,string,utm,webfilter,labels.fgt_crlevel,copy,false,"low/medium/high"
+
+# --- Campos enriquecidos pelo Vector ---
+_enrichment_observer_ip,ip,utm,webfilter,observer.ip,derived,true,
+_enrichment_observer_hostname,string,utm,webfilter,observer.hostname,derived,true,
+_enrichment_observer_type,string,utm,webfilter,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,utm,webfilter,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,utm,webfilter,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,utm,webfilter,related.ip,derived,true,"Array [source.ip, destination.ip]"
+_enrichment_related_user,string,utm,webfilter,related.user,derived,false,"[user.name] quando presente"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FortiGate 7.6.x — type=utm, subtype=app-ctrl
+# Classe legal: Registro de ACESSO A APLICAÇÃO (Marco Civil art. 15) — retenção 6 meses
+# Justificativa: identifica qual aplicação (não apenas protocolo/porta) foi
+# usada a partir de um IP em um instante — é uso de aplicação de internet.
+# Fonte: docs.fortinet.com/document/fortigate/7.6.4/fortios-log-message-reference/35537
+# ─────────────────────────────────────────────────────────────────────────────
+
+date,date,utm,app-ctrl,event.created,epoch_to_iso,true,
+time,date,utm,app-ctrl,@timestamp,epoch_to_iso,true,
+eventtime,date,utm,app-ctrl,event.start,epoch_to_iso,false,"No FortiOS 7.6 pode vir em segundos (Unix epoch) — normalizar no VRL"
+logid,string,utm,app-ctrl,event.code,copy,true,"Ex: 1059028704"
+eventtype,string,utm,app-ctrl,event.action,to_lowercase,true,"app-ctrl-all"
+type,string,utm,app-ctrl,event.kind,derived,true,"Valor fixo: 'event'"
+subtype,string,utm,app-ctrl,event.category,derived,true,"Mapeado para ['network'] no VRL"
+level,string,utm,app-ctrl,log.level,copy,false,
+vd,string,utm,app-ctrl,labels.fgt_vd,copy,false,
+
+# --- Origem ---
+srcip,ip,utm,app-ctrl,source.ip,ip_validate,true,"IP de quem usou a aplicação — central para o Marco Civil"
+srcport,integer,utm,app-ctrl,source.port,to_int,false,
+srcintf,string,utm,app-ctrl,observer.ingress.interface.name,copy,false,
+srcintfrole,string,utm,app-ctrl,labels.fgt_srcintfrole,copy,false,
+
+# --- Destino ---
+dstip,ip,utm,app-ctrl,destination.ip,ip_validate,true,
+dstport,integer,utm,app-ctrl,destination.port,to_int,true,
+dstintf,string,utm,app-ctrl,observer.egress.interface.name,copy,false,
+dstintfrole,string,utm,app-ctrl,labels.fgt_dstintfrole,copy,false,
+hostname,string,utm,app-ctrl,url.domain,to_lowercase,false,"Domínio associado à aplicação, quando identificável (ex: detectportal.firefox.com)"
+url,string,utm,app-ctrl,url.path,copy,false,"Path, quando presente"
+
+# --- A aplicação em si (o motivo deste arquivo existir) ---
+appid,integer,utm,app-ctrl,labels.fgt_appid,to_int,false,"ID interno FortiGate da aplicação"
+app,string,utm,app-ctrl,network.application,to_lowercase,true,"Nome da aplicação identificada — campo mais importante deste log (ex: HTTP.BROWSER_Firefox)"
+appcat,string,utm,app-ctrl,labels.fgt_appcat,copy,false,"Categoria (Web.Client, Video/Audio...)"
+apprisk,string,utm,app-ctrl,labels.fgt_apprisk,copy,false,"low/medium/elevated/high"
+applist,string,utm,app-ctrl,labels.fgt_applist,copy,false,"Nome do perfil de application control"
+incidentserialno,string,utm,app-ctrl,event.id,copy,false,"Alternativa a sessionid neste log — usar quando sessionid ausente"
+
+# --- Ação e política ---
+action,string,utm,app-ctrl,event.outcome,conditional,true,"pass/allow → success; block/reset → failure; mapeado no VRL"
+policyid,string,utm,app-ctrl,rule.id,copy,true,"ID da política de firewall — keyword no ECS"
+sessionid,string,utm,app-ctrl,event.id,copy,false,"ID de sessão — pode coincidir com o da traffic log correspondente para correlação"
+
+# --- Protocolo e direção ---
+proto,string,utm,app-ctrl,network.iana_number,copy,false,
+service,string,utm,app-ctrl,network.protocol,to_lowercase,false,
+direction,string,utm,app-ctrl,network.direction,to_lowercase,false,"outgoing/incoming — mapear para inbound/outbound no VRL"
+
+# --- Campos enriquecidos pelo Vector ---
+_enrichment_observer_ip,ip,utm,app-ctrl,observer.ip,derived,true,
+_enrichment_observer_hostname,string,utm,app-ctrl,observer.hostname,derived,true,
+_enrichment_observer_type,string,utm,app-ctrl,observer.type,derived,true,"Valor fixo: 'firewall'"
+_enrichment_observer_vendor,string,utm,app-ctrl,observer.vendor,derived,true,"Valor fixo: 'Fortinet'"
+_enrichment_observer_product,string,utm,app-ctrl,observer.product,derived,true,"Valor fixo: 'FortiGate'"
+_enrichment_related_ip,ip,utm,app-ctrl,related.ip,derived,true,"Array [source.ip, destination.ip]"
