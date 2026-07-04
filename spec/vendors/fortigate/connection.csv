@@ -6,8 +6,8 @@ vendor_field,vendor_type,fgt_type,fgt_subtype,ecs_field,transform,required,notes
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- Envelope / identificação do log ---
-date,date,traffic,*,event.created,epoch_to_iso,true,"Combinado com 'time' no parser antes deste mapeamento; date+time vira @timestamp"
-time,date,traffic,*,@timestamp,epoch_to_iso,true,"date+time juntos formam o timestamp original do FortiGate"
+date,date,traffic,*,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,traffic,*,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,traffic,*,event.start,epoch_to_iso,false,"Timestamp Unix em nanosegundos; usar como fonte primária de tempo quando presente"
 logid,string,traffic,*,event.code,copy,true,"Identificador do tipo de mensagem de log do FortiOS"
 type,string,traffic,*,event.kind,derived,true,"Valor fixo: 'event'"
@@ -85,8 +85,8 @@ _enrichment_related_ip,ip,traffic,*,related.ip,derived,true,"Array [source.ip, d
 # Fonte: docs.fortinet.com/document/fortigate/7.6.6/administration-guide/834425
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,event,vpn,event.created,epoch_to_iso,true,
-time,date,event,vpn,@timestamp,epoch_to_iso,true,
+date,date,event,vpn,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,event,vpn,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,event,vpn,event.start,epoch_to_iso,false,"Timestamp Unix em nanosegundos — fonte primária"
 logid,string,event,vpn,event.code,copy,true,"Ex: 0101037138 — tunnel-up, tunnel-down, negotiate..."
 type,string,event,vpn,event.kind,derived,true,"Valor fixo: 'event'"
@@ -137,8 +137,8 @@ _enrichment_related_user,string,event,vpn,related.user,derived,false,"[user.name
 # Fonte: docs.fortinet.com/document/fortigate/7.0.1/fortios-log-message-reference
 # ─────────────────────────────────────────────────────────────────────────────
 
-date,date,event,user,event.created,epoch_to_iso,true,
-time,date,event,user,@timestamp,epoch_to_iso,true,
+date,date,event,user,event.created,discard,false,"Componente usado apenas para formar @timestamp junto com 'time'; event.created é preenchido via eventtime quando disponível, ou copiado de @timestamp em common/timestamp.vrl"
+time,date,event,user,@timestamp,date_time_to_iso,true,"Combina .date + .time (strings) via parse_timestamp no VRL"
 eventtime,date,event,user,event.start,epoch_to_iso,false,
 logid,string,event,user,event.code,copy,true,"Ex: 0102043008 — sucesso/falha de autenticação"
 type,string,event,user,event.kind,derived,true,"Valor fixo: 'event'"
