@@ -1,3 +1,4 @@
 .env
+.old/
 build/
 spec/ecs/fields.csv
