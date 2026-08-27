@@ -3,11 +3,11 @@
 
 ### Goflow2 • Vector • Kafka • OpenSearch • ECS • Data Streams
 
-![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![Docker](https://img.shields.io/badge/docker-compose-blue)
-![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x-005EB8)
-![Vector](https://img.shields.io/badge/Vector-0.48-green)
-![Kafka](https://img.shields.io/badge/Kafka-4.x-black)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?logo=license)
+![Docker](https://img.shields.io/badge/docker-compose-blue?logo=docker)
+![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x-005EB8?logo=opensearch)
+![Vector](https://img.shields.io/badge/Vector-0.48-green?logo=vrl)
+![Kafka](https://img.shields.io/badge/Kafka-4.x-black?logo=apachekafka)
 
 ---
 
